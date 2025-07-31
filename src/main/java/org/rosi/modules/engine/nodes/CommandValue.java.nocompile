@@ -1,0 +1,6 @@
+package org.rosi.modules.engine.nodes ;
+
+public class CommandValue extends RosiValue {
+
+   
+}

@@ -1,0 +1,7 @@
+package org.rosi.modules.engine.nodes ;
+
+public interface TimeCheckable {
+
+   public boolean isTriggered() ;
+
+}
