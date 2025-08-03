@@ -25,14 +25,43 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
 |____/ \__|_|   \__,_|\___|\__|\__,_|_|  \___|
 
 */
+    /*
+     *   Available Annotations:
+     * 
+     *   device(<options>)
+     *      <options>:
+     *          triggerOnChange: returns true on 'setValue'
+     *          report: behaves like modified actor
+     *   sensor(<option>)
+     *      <options> : (inherits from 'device')
+     *   actor(<option>)
+     *      <options> : ninherits from 'device')
+     *   mono(<target>,<delay>,<options>)
+     *      <target> : name of the sensor to be observed.
+     *      <delay>: delay in seconds or keyword 'descriminator'
+     *      <options>:  (inherits from 'device')
+     *          noRetrigger
+     *          triggerOnSourceRepeats
+     */
     class MotionDetector {
 
         String cover = "closed" ;
         int brightness = 0 ;
-        String battery = "low" ;
 
-        @DeviceAnnotation("sensor(trigger)")
-        String motionCount = "nothing" ;
+        @DeviceAnnotation("sensor(triggerOnChange)")
+        String motionCount = "count_1" ;
+
+        @DeviceAnnotation("mono(motionCount,3,triggerOnChange,noRetrigger,report)")
+        boolean motionCount_mono = false ;
+
+        @DeviceAnnotation("actor()")
+        boolean motionCount_actor = false ;
+
+        @DeviceAnnotation("sensor(triggerOnChange)")
+        String battery = "high" ;
+
+        @DeviceAnnotation("mono(battery,descriminator,report)")
+        boolean battery_warning = false ;
 
     }
     class DoorDetector {
@@ -41,7 +70,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         @DeviceAnnotation("sensor(trigger)")
         int trigger_cnt = 0 ; 
 
-        @DeviceAnnotation("mono(trigger_cnt,20,onChange)")
+        @DeviceAnnotation("mono(trigger_cnt,20,triggerOnChange)")
         boolean trigger_cnt_mono = false ;
     }
     class HeaterDevice {
@@ -54,26 +83,26 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
     }
     class Room {
 
-        DoorDetector door = new DoorDetector();
+//        DoorDetector door = new DoorDetector();
         MotionDetector motion = new MotionDetector() ;
-        HeaterDevice heater = new HeaterDevice() ;
+//        HeaterDevice heater = new HeaterDevice() ;
     }
     class rooms {
-        Room livingroom = new Room() ;
+ //       Room livingroom = new Room() ;
         Room hallway    = new Room();
     }
     rooms devices = new rooms();
-/* ------------------------------------------------------------------          
-|  _ \ _ __ ___   __ _ _ __ __ _ _ __ ___  
-| |_) | '__/ _ \ / _` | '__/ _` | '_ ` _ \ 
-|  __/| | | (_) | (_| | | | (_| | | | | | |
-|_|   |_|  \___/ \__, |_|  \__,_|_| |_| |_|
-                 |___/                     
+/* ------------------------------------------------------------------ 
+  ____            _      _____             _             _     _      
+| __ )  __ _ ___(_) ___| ____|_ __   __ _(_)_ __   __ _| |__ | | ___ 
+|  _ \ / _` / __| |/ __|  _| | '_ \ / _` | | '_ \ / _` | '_ \| |/ _ \
+| |_) | (_| \__ \ | (__| |___| | | | (_| | | | | | (_| | |_) | |  __/
+|____/ \__,_|___/_|\___|_____|_| |_|\__, |_|_| |_|\__,_|_.__/|_|\___|
+                                    |___/                            
 */
     /*
      *     INITIALIZE
      */
-    private Set<String> dummyDevices = new HashSet<String>();
 
     /*
      *  INITIALIZE
@@ -92,8 +121,26 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
      *     EXECUTE
      * ---------------------------------
      */
-    public void execute() {
-        devices.hallway.heater.temperature = (float)23.5 ;
+    public void execute() throws Exception {
+        /*
+         * Prepare Mono's
+         */
+        for( Mono mono : _monos.values() )mono.check() ;
+        /*
+         * Run the actual program.
+         */
+        runProgram() ;
+        /*
+         * Reset all
+         */
+        //  for( Device device : _devices.values() )device.reset() ;
+
+    }
+    private void runProgram(){
+//        devices.hallway.heater.temperature = (float)23.5 ;
+        devices.hallway.motion.motionCount_actor = devices.hallway.motion.motionCount_mono ;
+        System.out.println(" runProgram : devices.hallway.motion.motionCount      : "+devices.hallway.motion.motionCount );
+        System.out.println(" runProgram : devices.hallway.motion.motionCount_mono : "+devices.hallway.motion.motionCount_mono );
     }
     /*
      *     SETVALUE
@@ -104,8 +151,8 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
 
         Device device = _devices.get(key);
         if( device == null ){
-            if( ! dummyDevices.contains(key) ){
-                dummyDevices.add(key);
+            if( ! _dummyDevices.contains(key) ){
+                _dummyDevices.add(key);
                 throw new
                     IllegalArgumentException("Device not found (reported only once): "+key);
             }
@@ -123,82 +170,33 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
             try{
                 if( device.isReport() && device.isChanged() )
                     outmap.put( device.getName() , device.getString() ) ;
+                device.reset() ;
             }catch(Exception ee){
 
             }
         }
         return outmap;
     }
-/*          
+/*   
+ * ---------------------------------------------------------------------------------       
  _____             _            
 | ____|_ __   __ _(_)_ __   ___ 
 |  _| | '_ \ / _` | | '_ \ / _ \
 | |___| | | | (_| | | | | |  __/
 |_____|_| |_|\__, |_|_| |_|\___|
-             |___/              
-         
+             |___/                  
 */
-    private Map<String,Device> _devices = new HashMap<String,Device>();
-       private void dumpDevices(){
-        System.out.println("\n ------ Listing devices!\n");
-        //for( Device device : _devices.values() ){
-        //    System.out.println(device.toString());
-        //}
-        List<String> sortedNames = new ArrayList<>(_devices.keySet()) ;
-        Collections.sort(sortedNames);
-        int maxNameLength = 0 ;
-        for( String name : sortedNames )
-            maxNameLength = Math.max(name.length(),maxNameLength);
-        int maxValueLength    = 0 ;
-        int maxPreviousLength = 0 ;
-        for( Device device : _devices.values() )
-            try{
-                maxValueLength = Math.max(device.getString().length() , maxValueLength ) ;
-                maxPreviousLength = Math.max(device.getPreviousString().length(),maxPreviousLength);
-            }catch(Exception ee ){}
-
-        for( String name : sortedNames ){
-            Device device = _devices.get(name);
-            StringBuffer sb = new StringBuffer() ;
-
-            int n = maxNameLength - name.length() ;
-            sb.append(name).append(" ").append(".".repeat(n)).append(" ") ;
-            if( device instanceof Sensor ){
-                sb.append("[S");
-            }else if( device instanceof Actor ){
-                sb.append("[A");
-            }else if( device instanceof Mono ){
-                sb.append("[M");
-            }else{
-                sb.append("[D");
-            }
-            sb.append(device.getValueClass().getName().substring(0,1));
-            try{
-                sb.append(device.isChanged()?"C":".") ;
-            }catch(Exception ee){
-                sb.append("X") ;
-            }
-            sb.append("] ");
-            try{
-                String value = device.getString() ;
-                n = value.length() ;
-                sb.append(" ".repeat(maxValueLength-n)).append(value).append(" ");
-            }catch(Exception ee){
-                sb.append("".repeat(maxValueLength-5)).append("error ");
-            }
-            String value = device.getPreviousString() ;
-            n = value.length() ;
-            sb.append( " [").append(" ".repeat(maxPreviousLength-n)).append(value).append("] ");
-
-            sb.append("(").append(device.getOptionsByString()).append(")");
-            System.out.println(sb.toString());
-        }
-    }
-    public Device getDevice( String key ) throws Exception {
-        Device device = _devices.get(key);
-        if( device == null )throw new IllegalArgumentException("No such device : "+key);
-        return device ;
-    }
+    private Map<String,Device> _devices = new HashMap<String,Device>() ;
+    private Map<String,Mono>   _monos   = new HashMap<String,Mono>() ;
+    private Set<String>        _dummyDevices = new HashSet<String>() ;
+/*
+            ____             _          
+            |  _ \  _____   _(_) ___ ___ 
+            | | | |/ _ \ \ / / |/ __/ _ \
+            | |_| |  __/\ V /| | (_|  __/
+            |____/ \___| \_/ |_|\___\___|
+  
+ */
     private class Device {
         private String name ;
         private Set<String> set = null ;
@@ -207,7 +205,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         private Object object ;
         private String previous = "" ;
         private boolean trigger         = false ;
-        private boolean triggerOnChange = false ;
+                boolean triggerOnChange = false ;
         private boolean report          = false ;
 
         private Device( String name ){
@@ -215,17 +213,15 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         }
         public boolean setValue( String value ) throws Exception {
             this.setReflectionValue( value );
-            String previous = this.previous ;
-            this.previous   = value ;
+            // Resetting previous to current done with 'getChangedActors'
             if( this.previous.equals("") ){
                 return false ;
-            }else if( this.triggerOnChange && ! value.equals(previous) ){
+            }else if( this.triggerOnChange && ! value.equals(this.previous) ){
                 return true ;
             }else if( this.trigger ){
                 return true ;
             }
             return false ;
-
         }
         public void setReflectionValue( String value ) throws Exception {
             if( this.clazz == int.class ){
@@ -279,6 +275,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         }
         public void reset() throws Exception {
             this.previous = this.getString() ;
+//            System.out.println("RESETTING: "+this.getName());
         }
         public Class getValueClass(){
             return this.clazz ;
@@ -309,7 +306,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         void addOption(String option ){
             if( option.equals("trigger") ){
                 this.trigger = true ;
-            }else if( option.equals("tiggerOnChange" ) ){
+            }else if( option.equals("triggerOnChange" ) ){
                 this.triggerOnChange = true ;
             }else if( option.equals("report") ){
                 this.report = true ;
@@ -323,6 +320,15 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         }
         String getName(){ return this.name ; }
     }
+/*
+  ____                            
+/ ___|  ___ _ __  ___  ___  _ __ 
+\___ \ / _ \ '_ \/ __|/ _ \| '__|
+ ___) |  __/ | | \__ \ (_) | |   
+|____/ \___|_| |_|___/\___/|_|   
+ 
+                                                
+*/
     private class Sensor extends Device {
         private Mono observer = null ;
         private Sensor( String name ){
@@ -333,8 +339,9 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         }
         public boolean setValue( String value ) throws Exception {
             boolean mustTrigger = super.setValue(value);
-            if( this.observer != null )this.observer.trigger(this) ;
-            return mustTrigger ;
+            if( this.observer == null )return mustTrigger ;
+            // Reminder : oder ist important, first ...trigger(this) and then mustTrigger :-)
+            return this.observer.trigger(this) || mustTrigger ;
         }
         public String toString(){
             StringBuffer sb = new StringBuffer() ;
@@ -346,6 +353,13 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
             return sb.toString() ;
         }
     }
+/*
+    _        _             
+   / \   ___| |_ ___  _ __ 
+  / _ \ / __| __/ _ \| '__|
+ / ___ \ (__| || (_) | |   
+/_/   \_\___|\__\___/|_|   
+ */
     private class Actor extends Device {
         private Actor( String name ){
             super( name ) ;
@@ -355,14 +369,26 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
             return "Actor();"+super.toString(); 
         }
     }
+/*
+ __  __                   
+|  \/  | ___  _ __   ___  
+| |\/| |/ _ \| '_ \ / _ \ 
+| |  | | (_) | | | | (_) |
+|_|  |_|\___/|_| |_|\___/ 
+                    
+ */
     private class Mono extends Device {
-        private String target  = null ;
-        private long   delay   = 0L ;
-        private long   started = 0L ;
-        private boolean noRetrigger     = false ;
-        private boolean triggerOnChange = false ;
+        private String target     = null ;
+        private long   delay      = 0L ;
+        private long   started    = 0L ;
+        private boolean retrigger = true ;
+        private boolean triggerOnlyOnSourceChanged = true ;
         private Mono( String name ){
             super( name ) ;
+        }
+        public boolean setValue( String value ) throws Exception {
+            throw new
+            IllegalArgumentException("Can't set Mono value!");
         }
         private void setTarget( String target ){
             this.target = target ;
@@ -371,40 +397,64 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
             return this.target ;
         }
         private void setDelay( long delay ){
-            this.delay = delay ;
+            this.delay = delay * 1000L ;
         }        
         private void setDescriminator(){
             this.delay = -1 ;
         }
         public void addOption( String option ) {
             if( option.equals("noRetrigger") ){
-                this.noRetrigger = true ;
-            }else if( option.equals("triggerOnChange" ) ){
-                this.triggerOnChange = true ;
+                this.retrigger = false ;
+            }else if( option.equals( "triggerOnSourceRepeats" ) ){
+                this.triggerOnlyOnSourceChanged = false;
             }else{
                 super.addOption(option);
             }
         }
-        private void trigger( Device source ) throws Exception {
+        private boolean trigger( Device source ) throws Exception {
             if( delay < 0 ){
-
+                /*
+                 * Decriminator
+                 */
+                if( ( ! this.triggerOnlyOnSourceChanged ) || source.isChanged() ) {
+                    super.setBoolean(true);
+                }
             }else{
-                this.started = System.currentTimeMillis() ;
-                super.setBoolean(true);
+                /*
+                 * Monoflop
+                 */
+                if( ( ( ! this.triggerOnlyOnSourceChanged ) || source.isChanged() ) &&
+                    ( ( ! this.check() ) || this.retrigger     )    ) {
+                        this.started = System.currentTimeMillis() ;
+                        super.setBoolean(true);
+                }
             }
+            return this.isChanged() || ! this.triggerOnChange ;
         }
         public String toString(){
             return "Mono("+this.target+","+delay+");"+super.toString(); 
         }
-        public boolean check() throws Exception {
-            boolean isTriggered = ! ( ( System.currentTimeMillis() - started ) > delay ) ;
-            super.setBoolean(isTriggered) ;
-            return isTriggered ;
-        }
         public void reset() throws Exception {
+            if( delay < 0 )super.setBoolean(false);
             super.reset() ;
-
         }
+        public boolean check() throws Exception {
+            if( this.delay < 0 ){
+                return false ;
+            }else{
+                boolean isTriggered = ( System.currentTimeMillis() - this.started ) < delay  ;
+                super.setBoolean(isTriggered) ;
+                return isTriggered ;
+            }
+        }
+    }
+    /*
+     * 
+     */
+    public Device getDevice( String key ) throws Exception {
+        Device device = _devices.get(key);
+        if( device == null )throw new IllegalArgumentException("No such device : "+key);
+        return device ;
     }
     public void resetDevices(){
         for( Device device : _devices.values() ){
@@ -414,7 +464,6 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
 
             }
         }
-       
     }
     private void  scanDevices( Object obj , Map<String,Device> map , String prefix) 
         throws Exception {
@@ -430,12 +479,13 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
                     "Program error: target("+targetName+
                     ") of Mono "+device.getName()+" not found or not a Sensor!");
                 ((Sensor)target).setObserver(mono);
+
+                _monos.put( device.getName() , (Mono) device ) ;
             }
         }
     }
     private void  walkObject( Object obj , Map<String,Device> map , String prefix) throws Exception {
         Class cls = obj.getClass();
-     //   System.out.println("Walking starts at "+cls.getName());
         System.out.println("Walking starts at "+prefix+" ["+cls.getName()+"]" );
         
         Field fieldlist[] = cls.getDeclaredFields() ; 
@@ -496,7 +546,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
          * Syntax :
          *     sensor(trigger|onChange)
          *     actor
-         *     mono(<target>,<delay>[,onChange])
+         *     mono(<target>,<delay>|'desc'[,onChange])
          */
         annotations = annotations.strip();
         if( annotations.length() ==0 ){
@@ -524,27 +574,128 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
                 IllegalArgumentException("mono of <"+name+"> expects > 0, found 0!") ;
 
             Mono mono = new Mono( name ) ;
-
+            /*
+             * Argument 1 : target (relative to this class or absolute with '.'s)
+             */
             String targetName = list.get(cursor++) ;
             if( targetName.indexOf(".") == -1 ){
                 int dot = name.lastIndexOf(".") + 1 ;
                 targetName = name.substring(0,dot) + targetName ;
             }
             mono.setTarget( targetName ) ;
-
-            if( cursor < max )mono.setDelay( Integer.parseInt( list.get(cursor++) ) ) ;
+            /*
+             * Argument 2 : delay eiter number or 'desc[riminator]' for delay = -1 ;
+             */
+            if( cursor < max ){
+                String delayString = list.get(cursor++) ;
+                int delay = delayString.startsWith("desc") ? -1 : Integer.parseInt( delayString ) ;
+                mono.setDelay( delay ) ;
+            }
 
             device = mono ;
                 
         }else if( func.equals("sensor" ) ){
             device = new Sensor(name) ;
         }
-        
+        /*
+         * use add option to add the remaning options. Some options are cought by
+         * the implentions of the superclasses of 'Device'. The rest is just stored
+         * in 'Device' options.
+         */
         while( cursor < max )device.addOption(list.get(cursor++)) ;             
         
         device.setReflection( field , obj , type ) ;
 
         return device ;
+    }
+
+    private void dumpDevices(){
+        System.out.println("\n ------ Listing devices!\n");
+        //for( Device device : _devices.values() ){
+        //    System.out.println(device.toString());
+        //}
+        List<String> sortedNames = new ArrayList<>(_devices.keySet()) ;
+        Collections.sort(sortedNames);
+        int maxNameLength = 0 ;
+        for( String name : sortedNames )
+            maxNameLength = Math.max(name.length(),maxNameLength);
+        int maxValueLength    = 0 ;
+        int maxPreviousLength = 0 ;
+        for( Device device : _devices.values() )
+            try{
+                maxValueLength = Math.max(device.getString().length() , maxValueLength ) ;
+                maxPreviousLength = Math.max(device.getPreviousString().length(),maxPreviousLength);
+            }catch(Exception ee ){}
+
+        for( String name : sortedNames ){
+            Device device = _devices.get(name);
+            StringBuffer sb = new StringBuffer() ;
+
+            int n = maxNameLength - name.length() ;
+            sb.append(name).append(" ").append(".".repeat(n)).append(" ") ;
+            if( device instanceof Sensor ){
+                sb.append("[S");
+            }else if( device instanceof Actor ){
+                sb.append("[A");
+            }else if( device instanceof Mono ){
+                sb.append("[M");
+            }else{
+                sb.append("[D");
+            }
+            /*
+             *  THE CLASS
+             */
+            String className = device.getValueClass().getName().substring(0,1).toUpperCase() ;
+            sb.append(className.equals("J") ? "S" : className);
+            /*
+             * should report (actor or 'report' annotation)
+             */
+            sb.append( device.report ? "R" : "r" ) ;
+            sb.append( device.trigger ? "T" : "t" ) ;
+            sb.append( device.triggerOnChange ? "X" : "x" ) ;
+            if( device instanceof Mono ){
+                Mono mono = (Mono)device ;
+                sb.append( mono.retrigger ? "G" : "g" ) ;
+                sb.append( mono.triggerOnlyOnSourceChanged ? "O" : "o" ) ;
+            }else{
+                sb.append("--");
+            }
+            /*
+             * was changed
+             */
+            try{
+                sb.append(device.isChanged()?"C":".") ;
+            }catch(Exception ee){
+                sb.append("X") ;
+            }
+            sb.append("] ");
+            /*
+             * VALUES [ previous values ]
+             */
+            try{
+                String value = device.getString() ;
+                n = value.length() ;
+                sb.append(" ".repeat(maxValueLength-n)).append(value).append(" ");
+            }catch(Exception ee){
+                sb.append("".repeat(maxValueLength-5)).append("error ");
+            }
+            String value = device.getPreviousString() ;
+            n = value.length() ;
+            sb.append( " [").append(" ".repeat(maxPreviousLength-n)).append(value).append("] ");
+
+            if( device instanceof Mono ){
+                Mono mono = (Mono)device ;
+                sb.append( "{").append(mono.getTarget()).append("} ");
+            }else if( device instanceof Sensor ){
+                Sensor sensor = (Sensor)device ;
+                if( sensor.observer != null )
+                    sb.append( "{").append(sensor.observer.getName()).append("} ");
+            }
+
+            
+            sb.append("(").append(device.getOptionsByString()).append(")");
+            System.out.println(sb.toString());
+        }
     }
     public SimpleJavaEngine( ModuleContext context ){
 
@@ -573,16 +724,47 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
 
     }
     public static void main( String [] args ) throws Exception {
+
         Map<String,String> contextMap = new HashMap<String,String>();
-        ModuleContext context = new ModuleContext( "engine" , contextMap );
-        SimpleJavaEngine engine = new SimpleJavaEngine( context ) ;
+        ModuleContext      context    = new ModuleContext( "engine" , contextMap );
+        SimpleJavaEngine   engine     = new SimpleJavaEngine( context ) ;
+
         engine.initialize();
         engine.execute() ;
         engine.dumpDevices() ;
-        engine.resetDevices();
-        engine.setValue("devices.hallway.heater.temperature","30.0");
-        engine.dumpDevices();
-        System.out.println("Result : "+
-        engine.getDevice("devices.hallway.heater.temperature").getFloat());
+
+        for( int i = 0 ; i < 1000000 ; i++){
+
+            Thread.sleep(1000);
+            System.out.println("\n ******* Count "+i+" ---------------------------\n");
+            boolean trigger = false ;
+
+            if( i == 2 ){
+                trigger = engine.setValue("devices.hallway.motion.battery","low");
+            }
+            if( ( i >  3 ) && ( i < 10 ) ){
+                trigger = engine.setValue("devices.hallway.motion.motionCount","count_3_"+i);
+            }
+
+            if( trigger ){
+                System.out.println("   ------- EXECUTE : ON REQUEST");
+                engine.execute() ;
+            }else if( i % 5 == 0 ){
+                System.out.println("   ------- EXECUTE : Tick Tack");
+                engine.execute() ;
+            }
+
+
+            engine.dumpDevices() ;
+            
+            System.out.println("   ------- Dumping changed actors: ");
+            Map<String,String> changedActors = engine.getModifiedActors() ;
+            for( Map.Entry<String,String> e : changedActors.entrySet() ){
+                System.out.println(e.getKey()+" -> "+e.getValue() ) ;
+            }
+            System.out.println("   --------------------------------");
+
+        }
+//      engine.getDevice("devices.hallway.heater.temperature").getFloat();
     }
 }

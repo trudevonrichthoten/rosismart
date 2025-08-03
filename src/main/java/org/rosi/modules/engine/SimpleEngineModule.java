@@ -74,9 +74,13 @@ public class SimpleEngineModule extends RosiModule {
 
                     RosiCommand command  = take() ;
 
+                    boolean runExecution = false ;
+
                     if( command instanceof RosiTimerCommand ){
 
-                        debug("Timer  '"+command.getSource()+"' -> '"+getName()+"' cmd="+command ) ;
+                        debug("Timer  '"+command.getSource()+"' -> '"+getName()+"' cmd="+command ) ;                            
+
+                        runExecution = true ;
 
                     }else if( command instanceof RosiSetterCommand ){
 
@@ -84,25 +88,26 @@ public class SimpleEngineModule extends RosiModule {
 
                         RosiSetterCommand setter = (RosiSetterCommand)command ;
 
-                        boolean trigger = _engine.setValue( setter.getKey() , setter.getValue() ) ;
-                        if( trigger ){
-
-                            _engine.execute();
-
-                            Map<String,String> actors = _engine.getModifiedActors() ;
-                            for( Map.Entry<String,String> set : actors.entrySet() ){
-                                RosiCommand reply = new RosiCommand( set.getKey() , set.getValue() ) ;
-                                debug("to BUS : "+reply);
-                                put( reply ) ;
-                            }
-                        }
+                        runExecution = _engine.setValue( setter.getKey() , setter.getValue() ) ;
 
                     }else{
 
                         errorLog("Unkown '"+command.getSource()+"' -> '"+getName()+"' cmd="+command ) ;
                 
                     } 
+                    if( runExecution ){
 
+                         _engine.execute();
+
+                        Map<String,String> actors = _engine.getModifiedActors() ;
+                        for( Map.Entry<String,String> set : actors.entrySet() ){
+                                RosiCommand reply = new RosiCommand( set.getKey() , set.getValue() ) ;
+                                debug("to BUS : "+reply);
+                                put( reply ) ;
+                        }
+                    }
+                }catch(IllegalArgumentException unkownSensor ){
+                    errorLog("IllegalArgumentException: "+unkownSensor.getMessage());                
                 }catch(RosiRuntimeException rre ){
                     errorLog("RosiRuntimeExecption in Execution Loop (continuing) : "+rre.getMessage());
                 }catch(Exception eee ){
