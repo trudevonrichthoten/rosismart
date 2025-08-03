@@ -63,6 +63,14 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         @DeviceAnnotation("mono(battery,descriminator,report)")
         boolean battery_warning = false ;
 
+        @DeviceAnnotation("sensor(triggerOnChange,report)")
+        String a = "low" ;
+
+        @DeviceAnnotation("mono(a,4,triggerOnChange,report)")
+        boolean b = false ;
+
+        @DeviceAnnotation("mono(b,descriminator,report)")
+        boolean c = false ; 
     }
     class DoorDetector {
         String activity = "alive" ;
@@ -207,21 +215,34 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         private boolean trigger         = false ;
                 boolean triggerOnChange = false ;
         private boolean report          = false ;
+        private Mono    observer        = null ;
+
 
         private Device( String name ){
             this.name = name ;
         }
         public boolean setValue( String value ) throws Exception {
+
             this.setReflectionValue( value );
-            // Resetting previous to current done with 'getChangedActors'
+
+            boolean mustTrigger = false ;
+
             if( this.previous.equals("") ){
-                return false ;
+                mustTrigger =  false ;
             }else if( this.triggerOnChange && ! value.equals(this.previous) ){
-                return true ;
+                mustTrigger =  true ;
             }else if( this.trigger ){
-                return true ;
+                mustTrigger =  true ;
             }
-            return false ;
+
+            if( this.observer == null )return mustTrigger ;
+
+            // Reminder : order ist important, first ...trigger(this) and then mustTrigger :-)
+
+            return this.observer.trigger(this) || mustTrigger ;
+        }
+        private void setObserver( Mono observer ){
+            this.observer = observer ;
         }
         public void setReflectionValue( String value ) throws Exception {
             if( this.clazz == int.class ){
@@ -330,26 +351,12 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
                                                 
 */
     private class Sensor extends Device {
-        private Mono observer = null ;
         private Sensor( String name ){
             super( name ) ;
-        }
-        private void setObserver( Mono observer ){
-            this.observer = observer ;
-        }
-        public boolean setValue( String value ) throws Exception {
-            boolean mustTrigger = super.setValue(value);
-            if( this.observer == null )return mustTrigger ;
-            // Reminder : oder ist important, first ...trigger(this) and then mustTrigger :-)
-            return this.observer.trigger(this) || mustTrigger ;
         }
         public String toString(){
             StringBuffer sb = new StringBuffer() ;
             sb.append("Sensor(") ;
-            if( this.observer != null ){
-                sb.append(this.observer.getName());
-            }
-            sb.append(");").append(super.toString());
             return sb.toString() ;
         }
     }
@@ -429,7 +436,11 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
                         super.setBoolean(true);
                 }
             }
-            return this.isChanged() || ! this.triggerOnChange ;
+            boolean shouldTrigger = this.isChanged() || ! this.triggerOnChange ;
+
+            if( super.observer != null )shouldTrigger = super.observer.trigger(this) | shouldTrigger ;
+
+            return shouldTrigger ;
         }
         public String toString(){
             return "Mono("+this.target+","+delay+");"+super.toString(); 
@@ -473,12 +484,13 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
                 Mono mono = (Mono)device ;
                 String targetName = mono.getTarget() ;
                 Device target = map.get(targetName) ;
-                if( ( target == null ) || ! (target instanceof Sensor ) )
+                if( target == null )
                     throw new
                     IllegalArgumentException(
                     "Program error: target("+targetName+
-                    ") of Mono "+device.getName()+" not found or not a Sensor!");
-                ((Sensor)target).setObserver(mono);
+                    ") of Mono "+device.getName()+" not found!");
+
+                target.setObserver(mono);
 
                 _monos.put( device.getName() , (Mono) device ) ;
             }
@@ -686,12 +698,10 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
             if( device instanceof Mono ){
                 Mono mono = (Mono)device ;
                 sb.append( "{").append(mono.getTarget()).append("} ");
-            }else if( device instanceof Sensor ){
-                Sensor sensor = (Sensor)device ;
-                if( sensor.observer != null )
-                    sb.append( "{").append(sensor.observer.getName()).append("} ");
             }
-
+                
+            if( device.observer != null )
+                    sb.append( "{").append(device.observer.getName()).append("} ");
             
             sb.append("(").append(device.getOptionsByString()).append(")");
             System.out.println(sb.toString());
@@ -745,6 +755,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
             if( ( i >  3 ) && ( i < 10 ) ){
                 trigger = engine.setValue("devices.hallway.motion.motionCount","count_3_"+i);
             }
+            if( i == 3 )trigger = engine.setValue("devices.hallway.motion.a" , "high");
 
             if( trigger ){
                 System.out.println("   ------- EXECUTE : ON REQUEST");
@@ -756,7 +767,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
 
 
             engine.dumpDevices() ;
-            
+
             System.out.println("   ------- Dumping changed actors: ");
             Map<String,String> changedActors = engine.getModifiedActors() ;
             for( Map.Entry<String,String> e : changedActors.entrySet() ){
