@@ -34,6 +34,7 @@ public class SimpleEngineModule extends RosiModule {
         log( "Started" ) ;
 
         String engineClassName = _context.get("program");
+        log("Loading engine class : "+engineClassName);
         if( engineClassName == null )
             throw new
             RosiRuntimeException("Error : 'engine.program' key not set in context of "+this.getClass().getName());
@@ -101,7 +102,7 @@ public class SimpleEngineModule extends RosiModule {
 
                         Map<String,String> actors = _engine.getModifiedActors() ;
                         for( Map.Entry<String,String> set : actors.entrySet() ){
-                                RosiCommand reply = new RosiCommand( set.getKey() , set.getValue() ) ;
+                                RosiCommand reply = new RosiSetterCommand( set.getKey() , set.getValue() ) ;
                                 debug("to BUS : "+reply);
                                 put( reply ) ;
                         }
