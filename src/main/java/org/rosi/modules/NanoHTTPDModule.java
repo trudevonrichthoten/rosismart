@@ -84,7 +84,7 @@ public class NanoHTTPDModule extends RosiModule {
         put( new RosiSetterCommand( key , value ) ) ;
     }
     private ModuleContext      _context = null ;
-    private Map<String,String> map      = new HashMap<String,String>() ;
+    private Map<String,String[]> map      = new HashMap<String,String[]>() ;
 
     public NanoHTTPDModule( String moduleName , ModuleContext context ) 
     throws Exception{
@@ -104,11 +104,12 @@ public class NanoHTTPDModule extends RosiModule {
         StringBuffer sb = new StringBuffer() ;
         boolean start = true ;
         sb.append("[");
-        for( Map.Entry<String,String> e : map.entrySet() ){
+        for( Map.Entry<String,String[]> e : map.entrySet() ){
             if( ! start )sb.append(","); 
             start = false ;
             sb.append("{\"key\":\"").append(e.getKey()).append("\",") ;
-            sb.append("\"value\":\"").append(e.getValue()).append("\"}") ;
+            sb.append("\"source\":\"").append(e.getValue()[0]).append("\",") ;
+            sb.append("\"value\":\"").append(e.getValue()[1]).append("\"}") ;
         }
         sb.append("]");
         return sb.toString() ;
@@ -128,11 +129,11 @@ public class NanoHTTPDModule extends RosiModule {
             append("</head><body>").
             append("<table border=1>").
             append("<thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>");
-        for( Map.Entry<String,String> e : map.entrySet() ){
+        for( Map.Entry<String,String[]> e : map.entrySet() ){
             sb.append("<tr><td>").
                 append(e.getKey()).
                 append("</td><td>").
-                append(e.getValue()).
+                append(e.getValue()[1]).
                 append("</td></tr>") ;
             }
             sb.append("</tbody></table>").append(responseFooter); 
@@ -162,8 +163,14 @@ public class NanoHTTPDModule extends RosiModule {
                         debug("Setter '"+command.getSource()+"' -> '"+getName()+"' cmd="+command ) ;
 
                         RosiSetterCommand setter = (RosiSetterCommand)command ;
+                        String [] ar = new String[2] ;
+                        ar[0] = setter.getSource() ;
+                        ar[1] = setter.getValue () ;
 
-                        this.map.put( setter.getKey() , setter.getValue() ) ;
+                        this.map.put( 
+                                    setter.getKey() , 
+                                    new String[] { setter.getSource() , setter.getValue() }  
+                                    ) ;
 
                     }else{
 
