@@ -38,14 +38,28 @@ public class NanoHTTPDModule extends RosiModule {
             Response.Status responseCode = Response.Status.OK ;
 
             String uri = session.getUri() ;
+            if( uri.equals("/") || uri.equals( "/page/table") ){
+            /* -------------------------------------------------- */
+                responseString = createTableBoxPage() ; /* getApiTablePageMenu() ; */
+                return newFixedLengthResponse( responseCode, "text/html" , responseString );
 
-            if( uri.equals("/status")){
+            }else if( uri.equals("/xxx") ){
+            /* -------------------------------------------------- */
+                responseString = getApiTablePageMenu() ; 
+                return newFixedLengthResponse( responseCode, "text/html" , responseString );
+
+            }else if( uri.equals("/status")){
+            /* -------------------------------------------------- */
                 responseString = getTableHTML() ;
-                return newFixedLengthResponse( responseCode, "text/html" , responseString );        
-            }else if( uri.equals("/request")){
-                responseString = getSubmitPage() ;
-                return newFixedLengthResponse( responseCode, "text/html" , responseString );        
+                return newFixedLengthResponse( responseCode, "text/html" , responseString );
+
+            }else if( uri.equals("/request") || uri.equals("/page/submit")){
+             /* -------------------------------------------------- */
+                responseString = createMessageSubmitPage() ; /* getSubmitPage() ; */
+                return newFixedLengthResponse( responseCode, "text/html" , responseString );
+
             }else if( uri.startsWith("/api/send/")){
+             /* -------------------------------------------------- */
                 String [] list = uri.split("/");
                 if( list.length != 4 ){
                     return newFixedLengthResponse( Response.Status.NOT_ACCEPTABLE, "text/html" , "Illegal Arguments!" );
@@ -66,10 +80,9 @@ public class NanoHTTPDModule extends RosiModule {
                         "Illegal Arguments! "+eee.getMessage() );
                 }
             }else if( uri.equals("/api/status")){
+             /* -------------------------------------------------- */
                 responseString = getTableJSON() ;
-            }else if( uri.equals("/") ){
-                responseString = getApiTablePage() ;
-                return newFixedLengthResponse( responseCode, "text/html" , responseString );
+      
             }else{
                 responseString = "404 Knock Knock" ;
                 responseCode   = Response.Status.NOT_FOUND;
@@ -188,6 +201,160 @@ public class NanoHTTPDModule extends RosiModule {
     public void setCommandProcessor( RosiCommandProcessor processor ){
 
     }
+    public String getApiTablePageMenu(){
+        return """
+   <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>API Data Viewer</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f4f8;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    /* Menu styling */
+    .menu {
+      background-color: #1e3a5f;
+      padding: 10px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .menu button {
+      background-color: #3b5998;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      margin: 0 10px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+
+    .menu button:hover {
+      background-color: #2d4373;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th {
+      background-color: #1e3a5f;
+      color: white;
+      padding: 10px;
+      text-align: left;
+    }
+
+    td {
+      padding: 10px;
+      color: #1e3a5f;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+
+    #updateButton {
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #1e3a5f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #updateButton:hover {
+      background-color: #16314a;
+    }
+  </style>
+</head>
+<body>
+  <!-- Menu bar -->
+  <div class="menu">
+    <button onclick="location.href='/'">Variable Table</button>
+    <button onclick="location.href='/request'">Variable Submission</button>
+    <button onclick="location.href='page3.html'">Page 3</button>
+    <button onclick="location.href='page4.html'">Page 4</button>
+  </div>
+
+  <!-- Main container -->
+  <div class="container">
+    <button id="updateButton">Update</button>
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Key</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data rows will be inserted here -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    document.getElementById("updateButton").addEventListener("click", function() {
+      fetch("/api/status")
+        .then(response => response.json())
+        .then(data => {
+          const tableBody = document.getElementById("dataTable").querySelector("tbody");
+          tableBody.innerHTML = ""; // Clear old rows
+
+          data.forEach(item => {
+            const row = document.createElement("tr");
+
+            const sourceCell = document.createElement("td");
+            sourceCell.textContent = item.source;
+            row.appendChild(sourceCell);
+
+            const keyCell = document.createElement("td");
+            keyCell.textContent = item.key;
+            row.appendChild(keyCell);
+
+            const valueCell = document.createElement("td");
+            valueCell.textContent = item.value;
+            row.appendChild(valueCell);
+
+            tableBody.appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error("Error fetching data:", error);
+        });
+    });
+  </script>
+
+</body>
+</html>    
+""";
+
+
+    }
+
     public String getApiTablePage(){
         return """
 <!DOCTYPE html>
@@ -225,7 +392,7 @@ public class NanoHTTPDModule extends RosiModule {
       cursor: pointer;
       margin-bottom: 1.5em;
     }
-      table {
+    table {
       width: 100%;
       border-collapse: collapse;
     }
@@ -479,4 +646,387 @@ public class NanoHTTPDModule extends RosiModule {
 </html>
 """;
     }
+    /*
+     * -----------------------------------------------------------------------
+     */
+    private String createTableBoxPage(){
+        StringBuffer sb = new StringBuffer() ;
+        sb.append("<!DOCTYPE html><html lang=\"en\" />");
+        sb.append("<title>Message Table</title>");
+        sb.append("<head><style>");
+        sb.append(cssBody);
+        sb.append(cssMenu);
+        sb.append(cssTableBox);
+        sb.append("</style></head><body>");
+        sb.append(htmlMenu);
+        sb.append(htmlTableBox);
+        sb.append("</body></html>");
+        
+        return sb.toString();
+    }
+    private String createMessageSubmitPage(){
+        StringBuffer sb = new StringBuffer() ;
+        sb.append("<!DOCTYPE html><html lang=\"en\" />");
+        sb.append("<title>Message Submit Form</title>");
+        sb.append("<head><style>");
+        sb.append(cssBody);
+        sb.append(cssMenu);
+        sb.append(cssMessageSubmitBox);
+        sb.append("</style></head><body>");
+        sb.append(htmlMenu);
+        sb.append(htmlMessageSubmitBox);
+        sb.append("</body></html>");
+
+        return sb.toString();
+    }
+    private String cssBody = 
+    """        
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f4f8;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    """;
+
+    private String cssMenu =
+    """
+    /* Menu Bar (shared) */
+    .menu {
+      background-color: #1e3a5f;
+      padding: 10px 0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .menu button {
+      background-color: #3b5998;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      margin: 0 10px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+
+    .menu button:hover {
+      background-color: #2d4373;
+    }
+    """;
+
+    private String cssMessageSubmitBox =
+    """
+    .form-container {
+      display: inline-block;
+      text-align: left;
+      padding: 30px;
+      margin: 50px auto;
+      background-color: #e6f0ff;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 500px;
+    }
+
+    .form-container label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+      color: #1e3a5f;
+    }
+
+    .form-container input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    #submitBtn {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #1e3a5f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #submitBtn:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }   
+    """;
+    private String cssTableBoxx = 
+    """
+    .table-box {
+      display: inline-block;
+      margin: 50px auto;
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    th {
+      background-color: #1e3a5f;
+      color: white;
+      padding: 10px; 
+      text-align: left;
+    }
+
+    td {
+      padding: 10px;
+      color: #1e3a5f;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+
+    #updateBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #1e3a5f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    """;
+
+    private String htmlMenu = 
+    """
+    <!-- Menu (shared) -->
+    <div class="menu">
+        <button onclick="location.href='/page/submit'">Message Submit</button>
+        <button onclick="location.href='/page/table'">Variable Table</button>
+        <button onclick="location.href='/'">Trude</button>
+        <button onclick="location.href='/'">Rosi</button>
+    </div>
+    """;
+
+    private String htmlMessageSubmitBox =
+    """
+    <!-- Form Box -->
+    <div class="form-container">
+        <label for="target">Target</label>
+        <input type="text" id="target" placeholder="Automatic" value="Automatic" disabled />
+
+        <label for="key">Key</label>
+        <input type="text" id="key" placeholder="Key" />
+
+        <label for="value">Value</label>
+        <input type="text" id="value" placeholder="Value" />
+
+        <button id="submitBtn" disabled>Submit</button>
+    </div>
+
+    <script>
+        const targetInput = document.getElementById('target');
+        const keyInput = document.getElementById('key');
+        const valueInput = document.getElementById('value');
+        const submitBtn = document.getElementById('submitBtn');
+
+        function checkInputs() {
+            submitBtn.disabled = !(
+                targetInput.value.trim() &&
+                keyInput.value.trim() &&
+                valueInput.value.trim()
+            );
+        }
+
+        [targetInput, keyInput, valueInput].forEach(input =>
+        input.addEventListener('input', checkInputs)
+        );
+
+        submitBtn.addEventListener('click', () => {
+        const request = `${targetInput.value.trim()}:${keyInput.value.trim()}:${valueInput.value.trim()}`;
+        fetch(`/api/send/${encodeURIComponent(request)}`)
+            .then(response => {
+            if (response.ok) {
+                alert('Submitted successfully!');
+            } else {
+                alert('Submission failed.');
+            }
+            })
+            .catch(error => {
+            console.error('Error:', error);
+            alert('Error during submission.');
+            });
+        });
+    </script>
+    """;
+    private String htmlTableBoxx = 
+    """  
+     <div class="table-box">
+        <button id="updateBtn">Update</button>
+        <table id="dataTable">
+        <thead>
+            <tr>
+            <th>Source</th>
+            <th>Key</th>
+            <th>Value</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+        </table>
+    </div>
+  <div class="container">
+    <button id="updateButton">Update</button>
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Key</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data rows will be inserted here -->
+      </tbody>
+    </table>
+  </div>
+    <script>
+    document.getElementById("updateBtn").addEventListener("click", () => {
+      fetch("/api/status")
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.querySelector("#dataTable tbody");
+          tbody.innerHTML = "";
+          data.forEach(item => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${item.source}</td>
+              <td>${item.key}</td>
+              <td>${item.value}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        })
+        .catch(err => {
+          console.error("Error fetching data:", err);
+        });
+    });
+    </script>
+    """;
+
+    private String cssTableBox = 
+    """
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th {
+      background-color: #1e3a5f;
+      color: white;
+      padding: 10px;
+      text-align: left;
+    }
+
+    td {
+      padding: 10px;
+      color: #1e3a5f;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+
+    #updateButton {
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #1e3a5f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #updateButton:hover {
+      background-color: #16314a;
+    }
+
+    """;
+
+    private String htmlTableBox = 
+    """
+  <!-- Main container -->
+  <div class="container">
+    <button id="updateButton">Update</button>
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Key</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data rows will be inserted here -->
+      </tbody>
+    </table>
+  </div>
+
+    <script>
+    document.getElementById("updateButton").addEventListener("click", function() {
+      fetch("/api/status")
+        .then(response => response.json())
+        .then(data => {
+          const tableBody = document.getElementById("dataTable").querySelector("tbody");
+          tableBody.innerHTML = ""; // Clear old rows
+
+          data.forEach(item => {
+            const row = document.createElement("tr");
+
+            const sourceCell = document.createElement("td");
+            sourceCell.textContent = item.source;
+            row.appendChild(sourceCell);
+
+            const keyCell = document.createElement("td");
+            keyCell.textContent = item.key;
+            row.appendChild(keyCell);
+
+            const valueCell = document.createElement("td");
+            valueCell.textContent = item.value;
+            row.appendChild(valueCell);
+
+            tableBody.appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error("Error fetching data:", error);
+        });
+    });
+     </script>
+    """;
 }
