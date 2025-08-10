@@ -181,7 +181,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         Map<String,String> outmap = new HashMap<String,String>();
         for( Device device : _devices.values() ){
             try{
-                if( device.isReport() && device.isChanged() ){
+                if( exportAll || ( device.isReport() && device.isChanged() ) ){
                     String name = device.getName() ;
                     if( name.startsWith("devices."))name = name.substring(8) ;
                     outmap.put( name , device.getString() ) ;
@@ -191,6 +191,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
 
             }
         }
+        
         return outmap;
     }
 /*   
@@ -715,11 +716,12 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
             System.out.println(sb.toString());
         }
     }
+    private boolean exportAll = false ;
     public SimpleJavaEngine( ModuleContext context ){
 
-      //  new Thread(this,"executing").start() ;
-      //  new Thread(this,"ingest").start() ;
-      //  new Thread(this,"reporting").start() ;
+        String mustExportAll = context.get("program.exportall");
+        exportAll = mustExportAll != null && mustExportAll.equals("true") ;
+        System.out.println("Flag: exportAll: "+exportAll);
 
     }
     public void run()  {
