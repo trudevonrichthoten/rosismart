@@ -99,7 +99,8 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
  //       Room livingroom = new Room() ;
         Room hallway    = new Room();
     }
-    rooms devices = new rooms();
+    rooms room_devices = new rooms();
+    private Object devices = room_devices ;
 /* ------------------------------------------------------------------ 
   ____            _      _____             _             _     _      
 | __ )  __ _ ___(_) ___| ____|_ __   __ _(_)_ __   __ _| |__ | | ___ 
@@ -108,9 +109,9 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
 |____/ \__,_|___/_|\___|_____|_| |_|\__, |_|_| |_|\__,_|_.__/|_|\___|
                                     |___/                            
 */
-    /*
-     *     INITIALIZE
-     */
+    public void setDevices( Object dev ){
+        devices = dev ;
+    }
 
     /*
      *  INITIALIZE
@@ -144,11 +145,14 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         //  for( Device device : _devices.values() )device.reset() ;
 
     }
-    private void runProgram(){
+    void runProgram(){
+        System.out.println("Running original Program!");
 //        devices.hallway.heater.temperature = (float)23.5 ;
+/* 
         devices.hallway.motion.motionCount_actor = devices.hallway.motion.motionCount_mono ;
         System.out.println(" runProgram : devices.hallway.motion.motionCount      : "+devices.hallway.motion.motionCount );
         System.out.println(" runProgram : devices.hallway.motion.motionCount_mono : "+devices.hallway.motion.motionCount_mono );
+*/
     }
     /*
      *     SETVALUE
@@ -157,6 +161,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
     public boolean setValue( String key , String value ) 
         throws  Exception  {
 
+        key = "devices."+key ;
         Device device = _devices.get(key);
         if( device == null ){
             if( ! _dummyDevices.contains(key) ){
@@ -176,8 +181,11 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         Map<String,String> outmap = new HashMap<String,String>();
         for( Device device : _devices.values() ){
             try{
-                if( device.isReport() && device.isChanged() )
-                    outmap.put( device.getName() , device.getString() ) ;
+                if( device.isReport() && device.isChanged() ){
+                    String name = device.getName() ;
+                    if( name.startsWith("devices."))name = name.substring(8) ;
+                    outmap.put( name , device.getString() ) ;
+                }
                 device.reset() ;
             }catch(Exception ee){
 
