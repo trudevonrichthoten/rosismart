@@ -9,7 +9,7 @@ public class ConfigInterpreter {
 
    private static String __globalSectionName = "GLOBAL" ;
 
-   private Pattern _assignment = Pattern.compile( "[ ]*([0-9a-zA-Z]*)=(.*)[ ]*" );
+   private Pattern _assignment = Pattern.compile( "[ ]*([0-9a-zA-Z\\-\\.]*)=(.*)[ ]*" );
    private Pattern _header     = Pattern.compile( "[ ]*\\[(.*)\\].*" );
 
    private File               _configFile ;
