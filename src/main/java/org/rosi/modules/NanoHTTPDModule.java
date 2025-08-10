@@ -234,17 +234,41 @@ public class NanoHTTPDModule extends RosiModule {
             append("<meta charset=\"UTF-8\">").
             append("<title>Framework Layout</title>");
 
-        sb.append("<style>").
-                append(cssComplexBody).
-                append(cssComplexMenu).
-            append("</style>");
+        sb.append("<style>");
+        sb.append("body {").
+            append("margin: 0;").
+            append("font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif;").
+            append("background-color: #f0f2f5;").
+           // append("display: flex;").
+            append("}");
+
+        sb.append(cssComplexMenu);
+
+        sb.append(".empty-page{").
+            append("margin: 0;").
+            append("padding: 0;").
+            append("height: 100%;").
+            append("background-color: #8B0000; ")./* dark red */
+            append("color: white;").
+            append("display: flex;").
+            append("flex: 1").
+            append("align-items: center;").
+            append("justify-content: center;").
+            append("font-family: Arial, sans-serif;").
+            append("font-size: 10vw;").
+            append("}");
+        sb.append("</style>");
 
         sb.append("</head>");
 
         sb.append("<body>").
-            append(htmlComplexMenu).
-            append("</body>");
+            append(htmlComplexMenu);
+            
+        sb.append("<div class=\"empty-page\">").
+            append(message).
+            append("</div>");
 
+        sb.append("</body>");
         sb.append("</html>");
         return sb.toString();      
     }
