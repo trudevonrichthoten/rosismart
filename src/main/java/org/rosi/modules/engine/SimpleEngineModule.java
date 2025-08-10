@@ -103,8 +103,9 @@ public class SimpleEngineModule extends RosiModule {
                         Map<String,String> actors = _engine.getModifiedActors() ;
                         for( Map.Entry<String,String> set : actors.entrySet() ){
                                 RosiCommand reply = new RosiSetterCommand( set.getKey() , set.getValue() ) ;
-                                debug("to BUS : "+reply);
                                 put( reply ) ;
+                                debug("to BUS : "+reply);
+
                         }
                     }
                 }catch(IllegalArgumentException unkownSensor ){
