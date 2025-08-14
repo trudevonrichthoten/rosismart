@@ -1027,7 +1027,7 @@ private String cssComplexBox =
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      justify-content: space-between;
+      justify-content: flex-start ; <!-- space-between; -->
     }
 
     .domain {
@@ -1037,7 +1037,8 @@ private String cssComplexBox =
       flex: 1 1 300px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
       display: flex;
-      flex-direction: column;
+      flex-direction: column;      
+      max-width: 600px;
     }
 
     .domain h3 {
