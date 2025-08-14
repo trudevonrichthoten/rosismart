@@ -338,6 +338,7 @@ public class NanoHTTPDModule extends RosiModule {
         sb.append(cssComplexBody);
         sb.append(cssComplexMenu);
         sb.append(cssTableBox);
+        sb.append(cssMessageSubmitBox);
         sb.append("</style>");
 
         sb.append("<script>");
@@ -349,6 +350,10 @@ public class NanoHTTPDModule extends RosiModule {
         sb.append("<body>");
         sb.append(htmlComplexMenu);
         sb.append(htmlTableBox);
+        sb.append("<script>");
+        sb.append(jsTableBox);
+        sb.append(jsMessageSubmitBox);
+        sb.append("</script>");
         sb.append("</body></html>");
         
         return sb.toString();
@@ -361,22 +366,33 @@ public class NanoHTTPDModule extends RosiModule {
         sb.append(cssComplexBody);
         sb.append(cssComplexMenu);
         sb.append(cssMessageSubmitBox);
-        sb.append("</style></head><body>");
+        sb.append("</style></head>");
+        sb.append("<body>");
         sb.append(htmlComplexMenu);
         sb.append(htmlMessageSubmitBox);
+        sb.append("<script>").
+          append(jsMessageSubmitBox).
+          append("</script>");
         sb.append("</body></html>");
 
         return sb.toString();
 }
- 
+/*
+ __   _                                ____        _               _ _   
+|  \/  | ___  ___ ___  __ _  __ _  ___/ ___| _   _| |__  _ __ ___ (_) |_ 
+| |\/| |/ _ \/ __/ __|/ _` |/ _` |/ _ \___ \| | | | '_ \| '_ ` _ \| | __|
+| |  | |  __/\__ \__ \ (_| | (_| |  __/___) | |_| | |_) | | | | | | | |_ 
+|_|  |_|\___||___/___/\__,_|\__, |\___|____/ \__,_|_.__/|_| |_| |_|_|\__|
+                            |___/                                        
+*/
 private String cssMessageSubmitBox =
-    """
+"""
     .form-container {
       <!-- display: inline-block; -->
       text-align: left;
       padding: 30px;
       margin: 50px auto;
-      background-color: white;
+      background-color: green;
       border-radius: 10px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       width: 500px;
@@ -413,60 +429,61 @@ private String cssMessageSubmitBox =
       background-color: #aaa;
       cursor: not-allowed;
     }   
-    """;
+""";
 
-    private String htmlMessageSubmitBox =
-    """
-    <!-- Form Box -->
-    <div class="form-container">
-        <label for="target">Target</label>
-        <input type="text" id="target" placeholder="Automatic" value="Automatic" disabled />
+private String htmlMessageSubmitBox =
+"""
+  <!-- Form Box -->
+  <div class="form-container">
+      <label for="target">Target</label>
+      <input type="text" id="target" placeholder="Automatic" value="Automatic" disabled />
 
-        <label for="key">Key</label>
-        <input type="text" id="key" placeholder="Key" />
+      <label for="key">Key</label>
+      <input type="text" id="key" placeholder="Key" />
 
-        <label for="value">Value</label>
-        <input type="text" id="value" placeholder="Value" />
+      <label for="value">Value</label>
+      <input type="text" id="value" placeholder="Value" />
 
-        <button id="submitBtn" disabled>Submit</button>
-    </div>
+      <button id="submitBtn" disabled>Submit</button>
+  </div>
+""";
 
-    <script>
-        const targetInput = document.getElementById('target');
-        const keyInput = document.getElementById('key');
-        const valueInput = document.getElementById('value');
-        const submitBtn = document.getElementById('submitBtn');
+private String jsMessageSubmitBox =
+"""
+  const targetInput = document.getElementById('target');
+  const keyInput    = document.getElementById('key');
+  const valueInput  = document.getElementById('value');
+  const submitBtn   = document.getElementById('submitBtn');
 
-        function checkInputs() {
-            submitBtn.disabled = !(
-                targetInput.value.trim() &&
-                keyInput.value.trim() &&
-                valueInput.value.trim()
-            );
-        }
+  function checkInputs() {
+      submitBtn.disabled = !(
+          targetInput.value.trim() &&
+          keyInput.value.trim() &&
+          valueInput.value.trim()
+      );
+  }
 
-        [targetInput, keyInput, valueInput].forEach(input =>
-        input.addEventListener('input', checkInputs)
-        );
+  [targetInput, keyInput, valueInput].forEach(input => 
+  input.addEventListener('input', checkInputs)
+  );
 
-        submitBtn.addEventListener('click', () => {
-        const request = `${targetInput.value.trim()}:${keyInput.value.trim()}:${valueInput.value.trim()}`;
-        fetch(`/api/send/${encodeURIComponent(request)}`)
-            .then(response => {
-            if (response.ok) {
-                alert('Submitted successfully!');
-            } else {
-                alert('Submission failed.');
-            }
-            })
-            .catch(error => {
-            console.error('Error:', error);
-            alert('Error during submission.');
-            });
-        });
-    </script>
-    """;
-    private String cssTableBox = 
+  submitBtn.addEventListener('click', () => {
+  const request = `${targetInput.value.trim()}:${keyInput.value.trim()}:${valueInput.value.trim()}`;
+  fetch(`/api/send/${encodeURIComponent(request)}`)
+      .then(response => {
+      if (response.ok) {
+          alert('Submitted successfully!');
+      } else {
+          alert('Submission failed.');
+      }
+      })
+      .catch(error => {
+      console.error('Error:', error);
+      alert('Error during submission.');
+      });
+  });
+""";
+private String cssTableBox = 
     """
     .container {
       max-width: 800px;
@@ -518,12 +535,41 @@ private String cssMessageSubmitBox =
       background-color: #16314a;
     }
 
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.overlay.is-hidden { display: none; }  /* reliable toggle */
+
+.dialog {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  min-width: 260px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.dialog label { display: block; margin-bottom: 8px; }
+.dialog input { width: 100%; padding: 6px; margin-bottom: 12px; }
+.dialog .buttons { text-align: right; }
+.dialog button { padding: 6px 12px; }
+
     """;
 
-    private String htmlTableBox = 
-    """
+private String htmlTableBox = 
+"""
   <!-- Main container -->
+
   <div class="container">
+    <div id="overlay" class="overlay is-hidden">
+    """
+        + htmlMessageSubmitBox +
+    """
+    </div>
     <table id="dataTable">
       <thead>
         <tr>
@@ -537,17 +583,79 @@ private String cssMessageSubmitBox =
       </tbody>
     </table>
   </div>
+""" ;
 
-    <script>
+private String jsTableBox =     
+"""
+  const overlay   = document.getElementById('overlay');
+  const dialog    = document.querySelector('.from-container');
+  const value_in  = document.getElementById('value');
+  const key_in    = document.getElementById('key');
+  const okBtn     = document.getElementById('submitBtn');
+
+  function openDialog(key_text,value_text) {
+    overlay.classList.remove('is-hidden');
+    key_in.value   = key_text;
+    value_in.value = value_text;
+    checkInputs();
+    // wait a tick so focus doesn't get swallowed by paint
+    setTimeout(() => value_in.focus(), 0);
+  }
+
+  function closeDialog() {
+    overlay.classList.add('is-hidden');
+  }
+
+  okBtn.addEventListener('click', () => {
+    console.log('User entered:', key_in.value," : ",value_in.value);
+    closeDialog();
+  });
+
+  // Click outside dialog to close
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeDialog();
+  });
+
+  // Escape to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('is-hidden')) {
+      closeDialog();
+    }
+  });
+
+  function clickOnTable(e){
+      const cell = e.target.closest('td');     // find the cell even if child was clicked
+      if (!cell || !ourBigTable.contains(cell)) return;
+
+      // Only trigger on the desired column
+      if (cell.cellIndex !== 1) return;
+
+      // Optional: ensure it's a body row (ignore header/footer if any)
+      const row = cell.parentElement;
+      if (!row.closest('tbody')) return;
+
+      clickColumnHandler(cell.textContent.trim(), row.cells[2].textContent.trim(),  { cell, row });
+
+  }
+  function clickColumnHandler( key_text , value_text , rest ){
+     console.log("HANDLER got "+key_text+":"+value_text);
+     openDialog(key_text , value_text );
+  }
+
+
+    const ourBigTable = document.getElementById("dataTable") ;
+    ourBigTable.addEventListener('click', clickOnTable ) ;
+
     btn = registerButton("ClickClack",refreshTable);
     console.log("Register Button returned : "+btn);
     refreshTable();
+
     function refreshTable() {
       console.log("Refreshing table");
       fetch("/api/status")
         .then(response => response.json())
         .then(data => {
-          const tableBody = document.getElementById("dataTable").querySelector("tbody");
+          const tableBody = ourBigTable.querySelector("tbody");
           tableBody.innerHTML = ""; // Clear old rows
 
           data.forEach(item => {
@@ -572,7 +680,6 @@ private String cssMessageSubmitBox =
           console.error("Error fetching data:", error);
         });
     }
-     </script>
     """;
     private String X404Page =
     """
@@ -656,8 +763,6 @@ private String jsSimpleBox(String requestString){
 
 return
 """
-
-
   const btn       = registerButton( "Refresh",loadData);
   const frame     = document.createElement('div');
   frame.className = "domain-frame";
