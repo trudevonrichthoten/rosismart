@@ -21,25 +21,9 @@ public abstract class RosiModule implements Runnable , RosiLogable {
    private List<BlockingQueue<RosiCommand>> 
             _senderQueueList = new ArrayList<BlockingQueue<RosiCommand>>() ;
 
-   private static final int LOG_ERROR = 1 ;
-   private static final int LOG_INFO  = 2 ;
-   private static final int LOG_DEBUG = 4 ;
-
-   private int _logLevel = LOG_ERROR ;
-
-   private RosiPrintStream _rosiPrint = null ;
-
-   private SimpleDateFormat _sdf = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss.SSS");
-
-   public class RosiPrintStream extends PrintStream {
-       public RosiPrintStream( OutputStream out ){
-          super(out);
-       }
-       public void println( String in ){
-          super.println(_name+" "+in);
-       }
-   }
+   
    public ModuleContext _context = null ;
+   private RosiLogable   _log     = null ;
    /**
      *  Rosi Constructure with context.
      *
@@ -47,20 +31,7 @@ public abstract class RosiModule implements Runnable , RosiLogable {
    public  RosiModule( String name , ModuleContext context ){
        _name      = name ;
        _context   = context ;
-       _rosiPrint = new RosiPrintStream(System.out);
-
-       String loglevel = _context.get("logLevel") ;
-       if( loglevel != null ){
-          if( loglevel.equals("debug") ){
-             _logLevel = LOG_INFO | LOG_ERROR | LOG_DEBUG ;
-          }else if( loglevel.equals("info") ){
-             _logLevel = LOG_INFO | LOG_ERROR ;
-          }else if( loglevel.equals("none") ){
-             _logLevel = 0 ;
-          }else{
-             _logLevel = LOG_ERROR ;
-          }
-       }
+       _log       = _context.getLogable() ;
    }
    /**
      * Returning the Module Name. 
@@ -69,38 +40,30 @@ public abstract class RosiModule implements Runnable , RosiLogable {
    public String getName(){
        return _name ;
    }
-   public PrintStream getRosiPrintStream(){
-       return _rosiPrint;
-   }
    public  String getContext( String context ){
       return _context.get(context);
    }
-   public String getFormattedDate(){
-      return _sdf.format(new Date());
-   }
+   public boolean isDebugMode(){ return true ; } ;
    /**
      *  Debug message from Modules
      *
      */
    public void debug(String message){ 
-      if( ( _logLevel & LOG_DEBUG ) != 0 )System.out.println(getFormattedDate()+" "+_name+" "+message);
-    }
-    public boolean isDebugMode(){
-      return ( _logLevel & LOG_DEBUG ) != 0 ;
+      _log.debug(message);
     }
    /**
      *  Log message from Modules
      *
      */
    public void log(String message){ 
-      if( ( _logLevel & LOG_INFO ) != 0 )System.out.println(getFormattedDate()+" "+_name+" "+message);
+      _log.log(message);
     }
    /**
      *  Error message from Modules
      *
      */
    public void errorLog(String message){ 
-      if( ( _logLevel & LOG_ERROR ) != 0 )System.err.println(getFormattedDate()+" "+_name+" "+message);
+      _log.errorLog(message);
    }
    /**
      * Returning the Module Context.

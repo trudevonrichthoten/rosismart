@@ -29,7 +29,6 @@ public class SimpleEngineModule extends RosiModule {
         super( moduleName , context );
 
         _context  = context ;
-    //    _log      = new RosiLogAdapter( "Native" , _context.getLogable() );
 
         log( "Started" ) ;
 

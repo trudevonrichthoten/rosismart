@@ -2,6 +2,7 @@ package org.rosi.modules.engine;
 
 import org.rosi.modules.ModuleContext ;
 import org.rosi.modules.engine.InspectionCompanion.FieldDetails;
+import org.rosi.util.RosiLogable ;
 
 import java.util.Map;
 import java.util.Set;
@@ -146,12 +147,12 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
 
     }
     void runProgram(){
-        System.out.println("Running original Program!");
+        _log.log("Running original Program!");
 //        devices.hallway.heater.temperature = (float)23.5 ;
 /* 
         devices.hallway.motion.motionCount_actor = devices.hallway.motion.motionCount_mono ;
-        System.out.println(" runProgram : devices.hallway.motion.motionCount      : "+devices.hallway.motion.motionCount );
-        System.out.println(" runProgram : devices.hallway.motion.motionCount_mono : "+devices.hallway.motion.motionCount_mono );
+        _log.log(" runProgram : devices.hallway.motion.motionCount      : "+devices.hallway.motion.motionCount );
+        _log.log(" runProgram : devices.hallway.motion.motionCount_mono : "+devices.hallway.motion.motionCount_mono );
 */
     }
     /*
@@ -305,7 +306,6 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
         }
         public void reset() throws Exception {
             this.previous = this.getString() ;
-//            System.out.println("RESETTING: "+this.getName());
         }
         public Class getValueClass(){
             return this.clazz ;
@@ -507,7 +507,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
     }
     private void  walkObject( Object obj , Map<String,Device> map , String prefix) throws Exception {
         Class cls = obj.getClass();
-        System.out.println("Walking starts at "+prefix+" ["+cls.getName()+"]" );
+        _log.log("Walking starts at "+prefix+" ["+cls.getName()+"]" );
         
         Field fieldlist[] = cls.getDeclaredFields() ; 
         for( int i = 0 ; i < fieldlist.length ; i++ ){
@@ -518,7 +518,7 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
             Class type   = field.getType();
             boolean p    = type.isPrimitive() ;
             
-            System.out.println("Found : "+field.getName()+" ["+type.getName()+"]");
+            _log.log(" Scan found : "+field.getName()+" ["+type.getName()+"]");
 
             DeviceAnnotation dd = field.getAnnotation(DeviceAnnotation.class);
             String annotations  = dd == null ? "" : dd.value();
@@ -631,10 +631,8 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
     }
 
     private void dumpDevices(){
-        System.out.println("\n ------ Listing devices!\n");
-        //for( Device device : _devices.values() ){
-        //    System.out.println(device.toString());
-        //}
+        _log.log("- Listing devices!");
+        //for( Device device : _devices.values() )_log.log(device.toString());
         List<String> sortedNames = new ArrayList<>(_devices.keySet()) ;
         Collections.sort(sortedNames);
         int maxNameLength = 0 ;
@@ -713,15 +711,19 @@ public class SimpleJavaEngine implements BasicEnginable, Runnable {
                     sb.append( "{").append(device.observer.getName()).append("} ");
             
             sb.append("(").append(device.getOptionsByString()).append(")");
-            System.out.println(sb.toString());
+            _log.log(sb.toString());
         }
     }
-    private boolean exportAll = false ;
+    private boolean     exportAll = false ;
+    private RosiLogable _log      = null ;
+
     public SimpleJavaEngine( ModuleContext context ){
 
         String mustExportAll = context.get("program.exportall");
         exportAll = mustExportAll != null && mustExportAll.equals("true") ;
-        System.out.println("Flag: exportAll: "+exportAll);
+
+        _log = context.getLogable() ;
+        _log.log("Flag: exportAll: "+exportAll);
 
     }
     public void run()  {

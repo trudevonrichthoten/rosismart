@@ -6,19 +6,25 @@ public class JavaEngineProgram extends SimpleJavaEngine {
 
     class HeaterDevice {
 
-            @DeviceAnnotation("sensor()")
+            @DeviceAnnotation("sensor(trigger)")
             float temperature = (float) 0.0 ;
 
             @DeviceAnnotation("actor()")
             float desired_temperature = (float) 0.0 ;
     }
     
-    class x {
+    class Room {
 
         HeaterDevice heater = new HeaterDevice() ;
+        HeaterDevice mover  = new HeaterDevice() ;
     }
+    
+    class House {
 
-    x devices = new x();
+         Room livingroom = new Room() ;
+         Room hallway    = new Room() ;
+    }
+    House devices = new House();
 
 
     public JavaEngineProgram( ModuleContext context ) {
@@ -27,8 +33,9 @@ public class JavaEngineProgram extends SimpleJavaEngine {
     }
 
     public void runProgram(){
-        devices.heater.desired_temperature = (float)100.0 ;
-        System.out.println("Running program");
+        System.out.println("-- Program -- : Running");
+
+        devices.livingroom.heater.desired_temperature = (float)100.0 ;
     }
 
 }

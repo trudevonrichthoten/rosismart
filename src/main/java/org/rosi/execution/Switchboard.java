@@ -4,53 +4,108 @@ import java.io.* ;
 import java.util.* ;
 import java.util.concurrent.* ;
 import java.lang.reflect.* ;
+import java.text.SimpleDateFormat;
 
 import org.rosi.util.* ;
 import org.rosi.modules.* ;
 
-public class Switchboard implements RosiLogable {
+public class Switchboard  {
 
-   private ConfigInterpreter _config = null ;
-   private PrintStream       _stdout = System.out ;
-   private PrintStream       _stderr = System.err ;
+   private class LogManager  {
 
-   public void log( String message ){
-      this.logInfo(message);
+      private static final int LOG_ERROR = 1 ;
+      private static final int LOG_INFO  = 2 ;
+      private static final int LOG_DEBUG = 4 ;
+
+      private final SimpleDateFormat _sdf = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss.SSS");
+
+      private int    _logLevel = LOG_ERROR ;
+      private String _tag      = null ;
+
+      /* Not using this class for now. */
+      
+      public class RosiPrintStream extends PrintStream {
+         private String _name ;
+         public RosiPrintStream( OutputStream out , String name ){
+            super(out);
+            _name = name ;
+         }
+         public void println( String in ){
+            super.println(getFormattedDate()+" ["+_name+"] "+in);
+         }
+      }
+      private PrintStream _stdout = System.out ;
+      private PrintStream _stderr = System.err ;
+
+      private class LogableImpl implements RosiLogable {
+         private String _tag      = "" ;
+         private int    _logLevel = 0 ;
+         private LogableImpl( String tag , int logLevel ){
+            this._tag      = tag ;
+            this._logLevel = logLevel ;
+         }
+         public void debug(String message){ 
+            if( ( this._logLevel & LOG_DEBUG ) != 0 )_stdout.println(getFormattedDate()+" ["+this._tag+"] (debug) "+message);
+         }
+         public void log(String message){ 
+            if( ( this._logLevel & LOG_INFO ) != 0 )_stdout.println(getFormattedDate()+" ["+this._tag+"] "+message);
+         }
+         public void errorLog(String message){ 
+            if( ( this._logLevel & LOG_ERROR ) != 0 )
+            if( _stdout != _stderr )_stderr.println(getFormattedDate()+" ["+this._tag+"] (error) "+message);
+         }
+ 
+      }
+      public RosiLogable getLogable( String tag ){
+         return new LogableImpl( tag , this._logLevel ) ;
+      }
+      public RosiLogable getLogable(){
+         return new LogableImpl( _tag , this._logLevel ) ;
+      }
+      private LogManager( String tag , String stdoutName , String stderrName , String logLevel ) throws IOException {
+
+         this._tag = tag ;
+
+         if( stdoutName != null ){
+            _stdout = new PrintStream( new FileOutputStream( new File( stdoutName ) , true ) ) ;
+            System.setOut( new RosiPrintStream( _stdout , "stdout" ) ) ;
+         }
+         if( stderrName != null ){
+            _stderr = new PrintStream( new FileOutputStream( new File( stderrName ) , true ) ) ;
+            System.setErr( new RosiPrintStream( _stderr , "stderr" ) ) ;
+         }
+         if( logLevel != null ){
+            if( logLevel.equals("debug") ){
+               _logLevel = LOG_INFO | LOG_ERROR | LOG_DEBUG ;
+            }else if( logLevel.equals("info") ){
+               _logLevel = LOG_INFO | LOG_ERROR ;
+            }else if( logLevel.equals("none") ){
+               _logLevel = 0 ;
+            }else{
+               _logLevel = LOG_ERROR ;
+            }
+         }
+      }
+      public boolean isDebugMode(){
+         return ( _logLevel & LOG_DEBUG ) != 0 ;
+      }
+      public String getFormattedDate(){
+         return _sdf.format(new Date());
+      }
    }
-   public void errorLog( String message ){
-      this.errorLog(message);
-   }
-   public void debug( String message ) {
-      this.logInfo(message);
-   }
-   private void logInfo( String msg ){
-     System.out.println("Switchboard: "+msg);
-   }
-   private void logError( String msg ){
-     System.err.println("Switchboard: Error "+msg);
-   }
-   private void setPrintStreams( PrintStream out , PrintStream err ){
-     _stdout = out ;
-     _stderr = err ;
-   }
+   private ConfigInterpreter _config  = null ;
+   private  LogManager       _printer = null ;
+   private RosiLogable       _log     = null ;
+
    public Switchboard( String configFileName ) throws Exception {
 
       _config = new ConfigInterpreter( new File( configFileName ) ) ;
 
-      /*
-       * Replace stdout and stderr
-       * ........................
-       */
-      String printStreamString = _config.get("stdout") ;
-      if( printStreamString != null ){
-         PrintStream stdout = new PrintStream( new FileOutputStream( new File( printStreamString ) , true ) ) ;
-         System.setOut( stdout ) ;
-      }
-      printStreamString = _config.get("stderr") ;
-      if( printStreamString != null ){
-         PrintStream stderr = new PrintStream( new FileOutputStream( new File( printStreamString ) , true ) ) ;
-         System.setErr( stderr ) ;
-      }
+      _printer = new LogManager( "Switch",
+                                 _config.get("stdout" ) ,
+                                 _config.get("stderr" ) ,
+                                 _config.get("logging") ) ;
+      _log = _printer.getLogable() ;
       /*
        * Which modules to launch 
        * ........................
@@ -76,49 +131,47 @@ public class Switchboard implements RosiLogable {
          String moduleName = launchModules[i].trim() ;
          if( moduleName.equals("") )continue ;
 
-         logInfo("Preparing module ; "+moduleName); 
+         _log.log("Preparing module ; "+moduleName); 
 
          Map<String,String> contextMap = _config.getSection(moduleName) ; 
 
          if( contextMap == null ){
-             logError("Error : no section for module found : "+moduleName);
+             _log.errorLog("Error : no section for module found (skipping): "+moduleName);
              continue ;
          }
          ModuleContext context = new ModuleContext( moduleName , contextMap ) ;
+         context.setLogable( _printer.getLogable(moduleName) ) ;
          /*
           *  Load the RosiModule
           *  -------------------
           */
          String className = context.get( "inputClass" ) ;
          if( className == null ){
-             logError("Error : 'inputClass' not specified for module : "+moduleName);
+             _log.errorLog("Error : 'inputClass' not specified for module : "+moduleName);
              continue ;
          }
-         /* temporary setting output to switchboard, resetting after  module is created. */
-         context.setLogable( this ) ;
-         RosiModule module = _loadRosiModule( moduleName , className , context ) ;
-         if( module == null ){
-             logError("Error : Couldn't launch : "+className);
-             continue ;
-         }
-         context.setLogable( module ) ;
-         String processorName = context.get( "processorClass" ) ;
-         if( processorName == null ){
-//             logInfo("No command processor specified "+moduleName);
-         }else{
-  
-             RosiCommandProcessor processor = _loadRosiCommandProcessor( processorName , context ) ;
-             if( processor != null )module.setCommandProcessor( processor ) ;
 
-         }
-         moduleMap.put( moduleName , module ) ; 
+         try{
+            RosiModule module = _loadRosiModule( moduleName , className , context ) ;
 
+            String processorName = context.get( "processorClass" ) ;
+            if( processorName == null ){
+               _log.debug("No command processor specified for "+moduleName);
+            }else{
+               RosiCommandProcessor processor = _loadRosiCommandProcessor( processorName , context ) ;
+               if( processor != null )module.setCommandProcessor( processor ) ;
+            }
+            moduleMap.put( moduleName , module ) ; 
+
+         }catch(Exception ee ){
+            _log.errorLog("Error in initializing module : "+moduleName+" -> "+ee);
+            ee.printStackTrace() ;
+         }
       }
       /**
         * Contruction of the 'queue network'.
         *
         */
-
       constructModuleCommunicationNetwork( moduleMap ) ;
 
       startRunnables( launchModules , moduleMap ) ;
@@ -142,8 +195,8 @@ public class Switchboard implements RosiLogable {
                  throw new
                  IllegalArgumentException("'receiveFrom: Sender not found : "+senderName );
 
-               logInfo( "'"+sender.getName()+
-                        "'.addToSenderQueueList('"+module.getName()+"'.getReceiverQueue() )" );  
+               _log.log( "'"+sender.getName()+
+                         "'.addToSenderQueueList('"+module.getName()+"'.getReceiverQueue() )" );  
 
                sender.addToSenderQueueList( module.getReceiverQueue() ) ;
             }
@@ -158,10 +211,10 @@ public class Switchboard implements RosiLogable {
 
             RosiModule receiver = moduleMap.get(receiverName) ;
             if( receiver == null ){
-               System.out.println("Warning : receiver not found : "+receiverName);
+               _log.errorLog("Warning : receiver not found : "+receiverName);
                continue ;
             }
-            logInfo("'"+module.getName()+"'.addToSenderQueueList('"+receiver.getName()+"'.getReceiverQueue() )" );  
+            _log.log("'"+module.getName()+"'.addToSenderQueueList('"+receiver.getName()+"'.getReceiverQueue() )" );  
 
             module.addToSenderQueueList( receiver.getReceiverQueue() ) ;
          }
@@ -182,7 +235,7 @@ public class Switchboard implements RosiLogable {
   
          new Thread(module).start() ;
  
-         logInfo(moduleName+" started");
+         _log.log(moduleName+" started");
       }
      
    }
